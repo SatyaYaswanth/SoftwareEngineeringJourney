@@ -33,3 +33,12 @@ bin/
 data/
 students.txt
 students1.txt
+
+### Maven ###
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### IntelliJ IDEA ###
+.idea/
+*.iml
