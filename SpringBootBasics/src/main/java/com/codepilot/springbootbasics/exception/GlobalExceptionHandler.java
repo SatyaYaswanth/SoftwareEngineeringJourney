@@ -24,13 +24,33 @@ public class GlobalExceptionHandler {
                 .body(error);
     }
 
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiError> handleUserNotFound(
+            UserNotFoundException exception) {
+
+        ApiError error = new ApiError(
+                HttpStatus.NOT_FOUND.value(),
+                exception.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(error);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidationException(
             MethodArgumentNotValidException exception) {
 
+        String message = exception.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .collect(java.util.stream.Collectors.joining(", "));
+
         ApiError error = new ApiError(
                 HttpStatus.BAD_REQUEST.value(),
-                "Validation failed"
+                message
         );
 
         return ResponseEntity
