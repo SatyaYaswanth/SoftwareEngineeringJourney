@@ -2,6 +2,8 @@ package com.codepilot.springbootbasics.controller;
 
 import com.codepilot.springbootbasics.dto.StudentCreateRequest;
 import com.codepilot.springbootbasics.dto.StudentResponse;
+import com.codepilot.springbootbasics.entity.Student;
+import com.codepilot.springbootbasics.service.StudentRelationshipService;
 import com.codepilot.springbootbasics.service.StudentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -15,9 +17,14 @@ import java.util.List;
 public class StudentController {
 
     private final StudentService studentService;
+    private final StudentRelationshipService studentRelationshipService;
 
-    public StudentController(StudentService studentService) {
+    public StudentController(
+            StudentService studentService,
+            StudentRelationshipService studentRelationshipService) {
+
         this.studentService = studentService;
+        this.studentRelationshipService = studentRelationshipService;
     }
 
     @PostMapping
@@ -50,5 +57,10 @@ public class StudentController {
     public ResponseEntity<Void> deleteStudent(@PathVariable Long id){
         studentService.deleteStudent(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/courses")
+    public Student getStudentWithCourses(@PathVariable Long id) {
+        return studentRelationshipService.getStudentWithCourses(id);
     }
 }
