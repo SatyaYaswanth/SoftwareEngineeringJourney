@@ -108,4 +108,9 @@ public class StudentController {
                 direction
         );
     }
+
+    @GetMapping("/admin-test")
+    public String adminTest() {
+        return "Admin access granted";
+    }
 }

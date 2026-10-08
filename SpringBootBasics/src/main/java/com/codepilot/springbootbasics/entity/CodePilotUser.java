@@ -4,31 +4,40 @@ import jakarta.persistence.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import jakarta.persistence.Column;
 
 @Entity
-@Table(name = "users")
+@Table(name = "codepilot_users")
 public class CodePilotUser {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String username;
 
+    @Column(unique = true, nullable = false)
     private String email;
 
+    @Column(nullable = false)
     private String passwordHash;
+
+    @Column(nullable = false)
+    private String role;
 
     @OneToMany(mappedBy = "user")
     private List<Workspace> workspaces = new ArrayList<>();
 
+
     protected CodePilotUser() {
     }
 
-    public CodePilotUser(String username, String email, String passwordHash) {
+    public CodePilotUser(String username, String email, String passwordHash, String role) {
         this.username = username;
         this.email = email;
         this.passwordHash = passwordHash;
+        this.role = role;
     }
 
     public Long getId() {
@@ -61,5 +70,13 @@ public class CodePilotUser {
 
     public List<Workspace> getWorkspaces() {
         return workspaces;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 }
