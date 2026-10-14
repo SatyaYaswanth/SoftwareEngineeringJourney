@@ -14,23 +14,37 @@ public class Task {
 
     private String description;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TaskStatus status = TaskStatus.TODO;
 
-    @ManyToOne
-    @JoinColumn(name = "project_id")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TaskPriority priority = TaskPriority.MEDIUM;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "project_id", nullable = false)
     private Project project;
-
 
 
     protected Task() {
     }
 
-    public Task(String title, String description, String status, Project project) {
+
+    public Task(
+            String title,
+            String description,
+            TaskStatus status,
+            TaskPriority priority,
+            Project project
+    ) {
         this.title = title;
         this.description = description;
         this.status = status;
+        this.priority = priority;
         this.project = project;
     }
+
 
     public Long getId() {
         return id;
@@ -44,7 +58,7 @@ public class Task {
         return description;
     }
 
-    public String getStatus() {
+    public TaskStatus getStatus() {
         return status;
     }
 
@@ -60,11 +74,21 @@ public class Task {
         this.description = description;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(TaskStatus status) {
         this.status = status;
     }
 
     public void setProject(Project project) {
         this.project = project;
     }
+
+
+    public TaskPriority getPriority() {
+        return priority;
+    }
+
+    public void setPriority(TaskPriority priority) {
+        this.priority = priority;
+    }
+
 }
