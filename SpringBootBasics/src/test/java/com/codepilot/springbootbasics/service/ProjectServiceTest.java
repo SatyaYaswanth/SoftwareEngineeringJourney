@@ -24,6 +24,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import com.codepilot.springbootbasics.exception.ResourceNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 class ProjectServiceTest {
@@ -150,7 +151,7 @@ class ProjectServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                UserNotFoundException.class,
+                ResourceNotFoundException.class,
                 () -> projectService.createProject(
                         workspaceId, request, email
                 )
@@ -205,7 +206,7 @@ class ProjectServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                UserNotFoundException.class,
+                ResourceNotFoundException.class,
                 () -> projectService.getWorkspaceProjects(99L, email)
         );
 
@@ -251,7 +252,7 @@ class ProjectServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                UserNotFoundException.class,
+                ResourceNotFoundException.class,
                 () -> projectService.getProject(projectId, email)
         );
     }

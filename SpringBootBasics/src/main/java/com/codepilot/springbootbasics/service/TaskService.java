@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import com.codepilot.springbootbasics.exception.ResourceNotFoundException;
 
 @Service
 public class TaskService {
@@ -48,7 +49,7 @@ public class TaskService {
                 .findByIdAndWorkspaceUserId(
                         projectId, user.getId())
                 .orElseThrow(() ->
-                        new UserNotFoundException(
+                        new ResourceNotFoundException(
                                 "Project not found with id: " + projectId));
     }
 
@@ -109,7 +110,7 @@ public class TaskService {
         Task task = taskRepository
                 .findByIdAndProject_Id(taskId, project.getId())
                 .orElseThrow(() ->
-                        new UserNotFoundException(
+                        new ResourceNotFoundException(
                                 "Task not found with id: " + taskId));
 
         return TaskResponse.from(task);
@@ -128,7 +129,7 @@ public class TaskService {
         Task task = taskRepository
                 .findByIdAndProject_Id(taskId, project.getId())
                 .orElseThrow(() ->
-                        new UserNotFoundException(
+                        new ResourceNotFoundException(
                                 "Task not found with id: " + taskId));
 
         task.setTitle(request.title());
@@ -159,7 +160,7 @@ public class TaskService {
         Task task = taskRepository
                 .findByIdAndProject_Id(taskId, project.getId())
                 .orElseThrow(() ->
-                        new UserNotFoundException(
+                        new ResourceNotFoundException(
                                 "Task not found with id: " + taskId));
 
         taskRepository.delete(task);

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import com.codepilot.springbootbasics.exception.ResourceNotFoundException;
 
 @Service
 public class WorkspaceService {
@@ -85,7 +86,7 @@ public class WorkspaceService {
         Workspace workspace = workspaceRepository
                 .findByIdAndUserId(workspaceId, user.getId())
                 .orElseThrow(() ->
-                        new UserNotFoundException(
+                        new ResourceNotFoundException(
                                 "Workspace not found with id: " + workspaceId));
 
         return new WorkspaceResponse(
@@ -109,7 +110,7 @@ public class WorkspaceService {
         Workspace workspace = workspaceRepository
                 .findByIdAndUserId(workspaceId, user.getId())
                 .orElseThrow(() ->
-                        new UserNotFoundException(
+                        new ResourceNotFoundException(
                                 "Workspace not found with id: " + workspaceId));
 
         workspace.setName(request.getName());
@@ -137,7 +138,7 @@ public class WorkspaceService {
         Workspace workspace = workspaceRepository
                 .findByIdAndUserId(workspaceId, user.getId())
                 .orElseThrow(() ->
-                        new UserNotFoundException(
+                        new ResourceNotFoundException(
                                 "Workspace not found with id: " + workspaceId));
 
         workspaceRepository.delete(workspace);

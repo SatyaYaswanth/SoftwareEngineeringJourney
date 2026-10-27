@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import com.codepilot.springbootbasics.exception.ResourceNotFoundException;
 
 @Service
 public class ProjectService {
@@ -37,9 +38,6 @@ public class ProjectService {
             ProjectCreateRequest request,
             String authenticatedEmail) {
 
-        System.out.println("Project authenticated email: "
-                + authenticatedEmail);
-
         CodePilotUser user = codePilotUserRepository
                 .findByEmail(authenticatedEmail)
                 .orElseThrow(() ->
@@ -49,7 +47,7 @@ public class ProjectService {
         Workspace workspace = workspaceRepository
                 .findByIdAndUserId(workspaceId, user.getId())
                 .orElseThrow(() ->
-                        new UserNotFoundException(
+                        new ResourceNotFoundException(
                                 "Workspace not found with id: " + workspaceId));
 
         Project project = new Project(
@@ -77,7 +75,7 @@ public class ProjectService {
         Workspace workspace = workspaceRepository
                 .findByIdAndUserId(workspaceId, user.getId())
                 .orElseThrow(() ->
-                        new UserNotFoundException(
+                        new ResourceNotFoundException(
                                 "Workspace not found with id: " + workspaceId));
 
         return projectRepository
@@ -102,7 +100,7 @@ public class ProjectService {
                 .findByIdAndWorkspaceUserId(
                         projectId, user.getId())
                 .orElseThrow(() ->
-                        new UserNotFoundException(
+                        new ResourceNotFoundException(
                                 "Project not found with id: " + projectId));
 
         return ProjectResponse.from(project);

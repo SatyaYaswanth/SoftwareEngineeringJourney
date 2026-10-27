@@ -26,6 +26,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import com.codepilot.springbootbasics.exception.ResourceNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
@@ -177,7 +178,7 @@ class TaskServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                UserNotFoundException.class,
+                ResourceNotFoundException.class,
                 () -> taskService.createTask(20L, request, email)
         );
 
@@ -230,7 +231,7 @@ class TaskServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                UserNotFoundException.class,
+                ResourceNotFoundException.class,
                 () -> taskService.getProjectTasks(20L, email)
         );
 
@@ -271,7 +272,7 @@ class TaskServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                UserNotFoundException.class,
+                ResourceNotFoundException.class,
                 () -> taskService.getTask(20L, 99L, email)
         );
     }
@@ -330,7 +331,7 @@ class TaskServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                UserNotFoundException.class,
+                ResourceNotFoundException.class,
                 () -> taskService.updateTask(20L, 99L, request, email)
         );
 
@@ -369,7 +370,7 @@ class TaskServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                UserNotFoundException.class,
+                ResourceNotFoundException.class,
                 () -> taskService.deleteTask(20L, 99L, email)
         );
 

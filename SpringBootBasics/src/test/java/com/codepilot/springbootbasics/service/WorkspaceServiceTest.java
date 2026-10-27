@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
+import com.codepilot.springbootbasics.exception.ResourceNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 class WorkspaceServiceTest {
@@ -185,7 +186,7 @@ class WorkspaceServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                UserNotFoundException.class,
+                ResourceNotFoundException.class,
                 () -> workspaceService.getWorkspace(workspaceId, email)
         );
     }
@@ -248,7 +249,7 @@ class WorkspaceServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                UserNotFoundException.class,
+                ResourceNotFoundException.class,
                 () -> workspaceService.updateWorkspace(
                         workspaceId, request, email)
         );
@@ -286,7 +287,7 @@ class WorkspaceServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(
-                UserNotFoundException.class,
+                ResourceNotFoundException.class,
                 () -> workspaceService.deleteWorkspace(workspaceId, email)
         );
 
