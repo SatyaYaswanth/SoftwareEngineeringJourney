@@ -1,6 +1,7 @@
 package com.codepilot.springbootbasics.dto;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
 
 public class PageResponse<T> {
 
@@ -87,5 +88,17 @@ public class PageResponse<T> {
 
     public void setLast(boolean last) {
         this.last = last;
+    }
+
+    public static <T> PageResponse<T> from(Page<T> result) {
+        return new PageResponse<>(
+                result.getContent(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages(),
+                result.isFirst(),
+                result.isLast()
+        );
     }
 }

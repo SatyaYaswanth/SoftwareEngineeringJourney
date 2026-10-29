@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.codepilot.springbootbasics.dto.PageResponse;
 
 @RestController
 @RequestMapping("/api")
@@ -47,9 +48,14 @@ public class ProjectController {
 
 
 
+
     @GetMapping("/workspaces/{workspaceId}/projects")
-    public List<ProjectResponse> getWorkspaceProjects(
+    public PageResponse<ProjectResponse> getWorkspaceProjects(
             @PathVariable Long workspaceId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction,
             Authentication authentication) {
 
         String authenticatedEmail =
@@ -60,9 +66,14 @@ public class ProjectController {
 
         return projectService.getWorkspaceProjects(
                 workspaceId,
-                authenticatedEmail
+                authenticatedEmail,
+                page,
+                size,
+                sortBy,
+                direction
         );
     }
+
 
 
 

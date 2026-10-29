@@ -1,6 +1,7 @@
 
 package com.codepilot.springbootbasics.service;
 
+import com.codepilot.springbootbasics.dto.PageResponse;
 import com.codepilot.springbootbasics.dto.TaskCreateRequest;
 import com.codepilot.springbootbasics.dto.TaskResponse;
 import com.codepilot.springbootbasics.entity.CodePilotUser;
@@ -8,6 +9,7 @@ import com.codepilot.springbootbasics.entity.Project;
 import com.codepilot.springbootbasics.entity.Task;
 import com.codepilot.springbootbasics.entity.TaskPriority;
 import com.codepilot.springbootbasics.entity.TaskStatus;
+import com.codepilot.springbootbasics.exception.ResourceNotFoundException;
 import com.codepilot.springbootbasics.exception.UserNotFoundException;
 import com.codepilot.springbootbasics.repository.CodePilotUserRepository;
 import com.codepilot.springbootbasics.repository.ProjectRepository;
@@ -18,6 +20,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -25,8 +29,10 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
-import com.codepilot.springbootbasics.exception.ResourceNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
@@ -66,7 +72,6 @@ class TaskServiceTest {
         setGeneratedId(project, 20L);
     }
 
-    // Test fixture helper; production entities remain unchanged.
     private void setGeneratedId(Object entity, Long id)
             throws Exception {
         Field idField = entity.getClass().getDeclaredField("id");
@@ -114,7 +119,6 @@ class TaskServiceTest {
     @Test
     void createTask_shouldUseDefaults_whenStatusAndPriorityAreNull() {
         String email = "test@example.com";
-        Long projectId = 20L;
 
         TaskCreateRequest request = new TaskCreateRequest(
                 "Write tests",
@@ -123,13 +127,13 @@ class TaskServiceTest {
                 null
         );
 
-        authorizeProject(projectId, email);
+        authorizeProject(20L, email);
 
         when(taskRepository.save(any(Task.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         TaskResponse response =
-                taskService.createTask(projectId, request, email);
+                taskService.createTask(20L, request, email);
 
         assertEquals(TaskStatus.TODO, response.status());
         assertEquals(TaskPriority.MEDIUM, response.priority());
@@ -140,10 +144,7 @@ class TaskServiceTest {
         String email = "missing@example.com";
 
         TaskCreateRequest request = new TaskCreateRequest(
-                "Task",
-                "Description",
-                null,
-                null
+                "Task", "Description", null, null
         );
 
         when(codePilotUserRepository.findByEmail(email))
@@ -165,10 +166,7 @@ class TaskServiceTest {
         String email = "test@example.com";
 
         TaskCreateRequest request = new TaskCreateRequest(
-                "Task",
-                "Description",
-                null,
-                null
+                "Task", "Description", null, null
         );
 
         when(codePilotUserRepository.findByEmail(email))
@@ -190,34 +188,43 @@ class TaskServiceTest {
         String email = "test@example.com";
 
         Task first = new Task(
-                "Task One",
-                "First task",
-                TaskStatus.TODO,
-                TaskPriority.MEDIUM,
-                project
+                "Task One", "First task",
+                TaskStatus.TODO, TaskPriority.MEDIUM, project
         );
 
         Task second = new Task(
-                "Task Two",
-                "Second task",
-                TaskStatus.COMPLETED,
-                TaskPriority.HIGH,
-                project
+                "Task Two", "Second task",
+                TaskStatus.COMPLETED, TaskPriority.HIGH, project
         );
 
         authorizeProject(20L, email);
 
-        when(taskRepository.findAllByProject_Id(20L))
-                .thenReturn(List.of(first, second));
+        when(taskRepository.findByProjectWithFilters(
+                eq(20L),
+                isNull(),
+                isNull(),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(first, second)));
 
-        List<TaskResponse> responses =
-                taskService.getProjectTasks(20L, email);
+        PageResponse<TaskResponse> response =
+                taskService.getProjectTasks(
+                        20L, email, 0, 10, "id", "asc", null, null
+                );
 
-        assertEquals(2, responses.size());
-        assertEquals("Task One", responses.get(0).title());
-        assertEquals("Task Two", responses.get(1).title());
+        assertEquals(2, response.getContent().size());
+        assertEquals("Task One", response.getContent().get(0).title());
+        assertEquals("Task Two", response.getContent().get(1).title());
+        assertEquals(2, response.getTotalElements());
+        assertEquals(1, response.getTotalPages());
+        assertTrue(response.isFirst());
+        assertTrue(response.isLast());
 
-        verify(taskRepository).findAllByProject_Id(20L);
+        verify(taskRepository).findByProjectWithFilters(
+                eq(20L),
+                isNull(),
+                isNull(),
+                any(Pageable.class)
+        );
     }
 
     @Test
@@ -232,10 +239,17 @@ class TaskServiceTest {
 
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> taskService.getProjectTasks(20L, email)
+                () -> taskService.getProjectTasks(
+                        20L, email, 0, 10, "id", "asc", null, null
+                )
         );
 
-        verify(taskRepository, never()).findAllByProject_Id(anyLong());
+        verify(taskRepository, never()).findByProjectWithFilters(
+                anyLong(),
+                any(),
+                any(),
+                any(Pageable.class)
+        );
     }
 
     @Test
@@ -243,11 +257,8 @@ class TaskServiceTest {
         String email = "test@example.com";
 
         Task task = new Task(
-                "Implement login",
-                "Create login endpoint",
-                TaskStatus.IN_PROGRESS,
-                TaskPriority.HIGH,
-                project
+                "Implement login", "Create login endpoint",
+                TaskStatus.IN_PROGRESS, TaskPriority.HIGH, project
         );
 
         authorizeProject(20L, email);
@@ -282,18 +293,13 @@ class TaskServiceTest {
         String email = "test@example.com";
 
         Task task = new Task(
-                "Old title",
-                "Old description",
-                TaskStatus.TODO,
-                TaskPriority.LOW,
-                project
+                "Old title", "Old description",
+                TaskStatus.TODO, TaskPriority.LOW, project
         );
 
         TaskCreateRequest request = new TaskCreateRequest(
-                "Updated title",
-                "Updated description",
-                TaskStatus.COMPLETED,
-                TaskPriority.HIGH
+                "Updated title", "Updated description",
+                TaskStatus.COMPLETED, TaskPriority.HIGH
         );
 
         authorizeProject(20L, email);
@@ -319,10 +325,8 @@ class TaskServiceTest {
         String email = "test@example.com";
 
         TaskCreateRequest request = new TaskCreateRequest(
-                "Updated title",
-                "Updated description",
-                TaskStatus.COMPLETED,
-                TaskPriority.HIGH
+                "Updated title", "Updated description",
+                TaskStatus.COMPLETED, TaskPriority.HIGH
         );
 
         authorizeProject(20L, email);
@@ -343,11 +347,8 @@ class TaskServiceTest {
         String email = "test@example.com";
 
         Task task = new Task(
-                "Task to delete",
-                "Delete this task",
-                TaskStatus.TODO,
-                TaskPriority.MEDIUM,
-                project
+                "Task to delete", "Delete this task",
+                TaskStatus.TODO, TaskPriority.MEDIUM, project
         );
 
         authorizeProject(20L, email);

@@ -2,6 +2,7 @@
 package com.codepilot.springbootbasics.controller;
 
 import com.codepilot.springbootbasics.config.SecurityConfig;
+import com.codepilot.springbootbasics.dto.PageResponse;
 import com.codepilot.springbootbasics.dto.ProjectCreateRequest;
 import com.codepilot.springbootbasics.dto.ProjectResponse;
 import com.codepilot.springbootbasics.entity.CodePilotUser;
@@ -54,13 +55,12 @@ class ProjectControllerTest {
     @MockitoBean
     private CodePilotUserRepository userRepository;
 
-    private final CodePilotUser testUser =
-            new CodePilotUser(
-                    "Test User",
-                    "test@example.com",
-                    "hashed-password",
-                    "USER"
-            );
+    private final CodePilotUser testUser = new CodePilotUser(
+            "Test User",
+            "test@example.com",
+            "hashed-password",
+            "USER"
+    );
 
     private UsernamePasswordAuthenticationToken testAuthentication() {
         return new UsernamePasswordAuthenticationToken(
@@ -151,27 +151,55 @@ class ProjectControllerTest {
     }
 
     @Test
-    void getWorkspaceProjects_shouldReturnProjectList() throws Exception {
+    void getWorkspaceProjects_shouldReturnPaginatedResponse()
+            throws Exception {
 
         when(projectService.getWorkspaceProjects(
                 10L,
-                "test@example.com"
-        )).thenReturn(List.of(
-                new ProjectResponse(
-                        20L, "Frontend", "User interface", 10L
+                "test@example.com",
+                0,
+                10,
+                "id",
+                "asc"
+        )).thenReturn(new PageResponse<>(
+                List.of(
+                        new ProjectResponse(
+                                20L, "Frontend", "User interface", 10L
+                        ),
+                        new ProjectResponse(
+                                21L, "Backend", "REST API", 10L
+                        )
                 ),
-                new ProjectResponse(
-                        21L, "Backend", "REST API", 10L
-                )
+                0,
+                10,
+                2,
+                1,
+                true,
+                true
         ));
 
         mockMvc.perform(get("/api/workspaces/10/projects")
                         .with(authentication(testAuthentication())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].name").value("Frontend"))
-                .andExpect(jsonPath("$[1].name").value("Backend"))
-                .andExpect(jsonPath("$[0].workspaceId").value(10));
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].name").value("Frontend"))
+                .andExpect(jsonPath("$.content[1].name").value("Backend"))
+                .andExpect(jsonPath("$.content[0].workspaceId").value(10))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(10))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.first").value(true))
+                .andExpect(jsonPath("$.last").value(true));
+
+        verify(projectService).getWorkspaceProjects(
+                10L,
+                "test@example.com",
+                0,
+                10,
+                "id",
+                "asc"
+        );
     }
 
     @Test
@@ -180,7 +208,11 @@ class ProjectControllerTest {
 
         when(projectService.getWorkspaceProjects(
                 999L,
-                "test@example.com"
+                "test@example.com",
+                0,
+                10,
+                "id",
+                "asc"
         )).thenThrow(new UserNotFoundException(
                 "Workspace not found with id: 999"
         ));

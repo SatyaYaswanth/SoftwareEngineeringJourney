@@ -15,6 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import com.codepilot.springbootbasics.exception.ResourceNotFoundException;
+import com.codepilot.springbootbasics.dto.PageResponse;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @Service
 public class ProjectService {
@@ -61,10 +65,15 @@ public class ProjectService {
         return ProjectResponse.from(savedProject);
     }
 
+
     @Transactional(readOnly = true)
-    public List<ProjectResponse> getWorkspaceProjects(
+    public PageResponse<ProjectResponse> getWorkspaceProjects(
             Long workspaceId,
-            String authenticatedEmail) {
+            String authenticatedEmail,
+            int page,
+            int size,
+            String sortBy,
+            String direction) {
 
         CodePilotUser user = codePilotUserRepository
                 .findByEmail(authenticatedEmail)
@@ -78,12 +87,33 @@ public class ProjectService {
                         new ResourceNotFoundException(
                                 "Workspace not found with id: " + workspaceId));
 
-        return projectRepository
-                .findByWorkspaceId(workspace.getId())
-                .stream()
-                .map(ProjectResponse::from)
-                .toList();
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException(
+                    "Page must be non-negative and size must be between 1 and 100");
+        }
+
+        if (!List.of("id", "name", "description").contains(sortBy)) {
+            throw new IllegalArgumentException("Invalid project sort field");
+        }
+
+        Sort.Direction sortDirection;
+        try {
+            sortDirection = Sort.Direction.fromString(direction);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException(
+                    "Direction must be 'asc' or 'desc'");
+        }
+
+        Pageable pageable = PageRequest.of(
+                page, size, Sort.by(sortDirection, sortBy));
+
+        return PageResponse.from(
+                projectRepository
+                        .findByWorkspaceId(workspace.getId(), pageable)
+                        .map(ProjectResponse::from)
+        );
     }
+
 
     @Transactional(readOnly = true)
     public ProjectResponse getProject(

@@ -2,9 +2,12 @@
 package com.codepilot.springbootbasics.controller;
 
 import com.codepilot.springbootbasics.config.SecurityConfig;
+import com.codepilot.springbootbasics.dto.PageResponse;
 import com.codepilot.springbootbasics.dto.TaskCreateRequest;
 import com.codepilot.springbootbasics.dto.TaskResponse;
 import com.codepilot.springbootbasics.entity.CodePilotUser;
+import com.codepilot.springbootbasics.entity.TaskPriority;
+import com.codepilot.springbootbasics.entity.TaskStatus;
 import com.codepilot.springbootbasics.exception.GlobalExceptionHandler;
 import com.codepilot.springbootbasics.repository.CodePilotUserRepository;
 import com.codepilot.springbootbasics.security.JwtAuthenticationFilter;
@@ -26,6 +29,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -76,8 +80,8 @@ class TaskControllerTest {
                 101L,
                 "Fix bug",
                 "Investigate issue",
-                null,
-                null,
+                TaskStatus.TODO,
+                TaskPriority.MEDIUM,
                 10L
         );
     }
@@ -93,6 +97,7 @@ class TaskControllerTest {
 
     @Test
     void createTaskReturnsCreated() throws Exception {
+
         when(taskService.createTask(
                 eq(10L),
                 any(TaskCreateRequest.class),
@@ -117,23 +122,104 @@ class TaskControllerTest {
     }
 
     @Test
-    void getProjectTasksReturnsTaskList() throws Exception {
-        when(taskService.getProjectTasks(10L, "test@example.com"))
-                .thenReturn(List.of(sampleTask()));
+    void getProjectTasksReturnsPaginatedResponse() throws Exception {
+
+        when(taskService.getProjectTasks(
+                10L,
+                "test@example.com",
+                0,
+                10,
+                "id",
+                "asc",
+                null,
+                null
+        )).thenReturn(new PageResponse<>(
+                List.of(sampleTask()),
+                0,
+                10,
+                1,
+                1,
+                true,
+                true
+        ));
 
         mockMvc.perform(get("/api/projects/10/tasks")
                         .with(authentication(testAuthentication())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(101))
-                .andExpect(jsonPath("$[0].title").value("Fix bug"))
-                .andExpect(jsonPath("$[0].projectId").value(10));
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(101))
+                .andExpect(jsonPath("$.content[0].title").value("Fix bug"))
+                .andExpect(jsonPath("$.content[0].projectId").value(10))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(10))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.first").value(true))
+                .andExpect(jsonPath("$.last").value(true));
 
-        verify(taskService).getProjectTasks(10L, "test@example.com");
+        verify(taskService).getProjectTasks(
+                10L,
+                "test@example.com",
+                0,
+                10,
+                "id",
+                "asc",
+                null,
+                null
+        );
+    }
+
+    @Test
+    void getProjectTasksPassesPaginationAndFilters() throws Exception {
+
+        when(taskService.getProjectTasks(
+                10L,
+                "test@example.com",
+                1,
+                5,
+                "title",
+                "desc",
+                TaskStatus.TODO,
+                TaskPriority.HIGH
+        )).thenReturn(new PageResponse<>(
+                List.of(sampleTask()),
+                1,
+                5,
+                6,
+                2,
+                false,
+                true
+        ));
+
+        mockMvc.perform(get("/api/projects/10/tasks")
+                        .param("page", "1")
+                        .param("size", "5")
+                        .param("sortBy", "title")
+                        .param("direction", "desc")
+                        .param("status", "TODO")
+                        .param("priority", "HIGH")
+                        .with(authentication(testAuthentication())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.size").value(5))
+                .andExpect(jsonPath("$.totalElements").value(6))
+                .andExpect(jsonPath("$.totalPages").value(2));
+
+        verify(taskService).getProjectTasks(
+                10L,
+                "test@example.com",
+                1,
+                5,
+                "title",
+                "desc",
+                TaskStatus.TODO,
+                TaskPriority.HIGH
+        );
     }
 
     @Test
     void getTaskReturnsTask() throws Exception {
+
         when(taskService.getTask(10L, 101L, "test@example.com"))
                 .thenReturn(sampleTask());
 
@@ -149,6 +235,7 @@ class TaskControllerTest {
 
     @Test
     void updateTaskReturnsUpdatedTask() throws Exception {
+
         when(taskService.updateTask(
                 eq(10L),
                 eq(101L),
@@ -175,6 +262,7 @@ class TaskControllerTest {
 
     @Test
     void deleteTaskReturnsNoContent() throws Exception {
+
         mockMvc.perform(delete("/api/projects/10/tasks/101")
                         .with(authentication(testAuthentication())))
                 .andExpect(status().isNoContent());
@@ -184,6 +272,7 @@ class TaskControllerTest {
 
     @Test
     void createTaskWithBlankTitleReturnsBadRequest() throws Exception {
+
         String json = """
                 {
                     "title": "   ",
@@ -201,7 +290,9 @@ class TaskControllerTest {
     @Test
     void createTaskWithTitleExceedingLimitReturnsBadRequest()
             throws Exception {
+
         String longTitle = "a".repeat(151);
+
         String json = """
                 {
                     "title": "%s",
@@ -219,7 +310,9 @@ class TaskControllerTest {
     @Test
     void createTaskWithDescriptionExceedingLimitReturnsBadRequest()
             throws Exception {
+
         String longDescription = "a".repeat(1001);
+
         String json = """
                 {
                     "title": "Valid task",
@@ -236,6 +329,7 @@ class TaskControllerTest {
 
     @Test
     void createTaskWithInvalidStatusReturnsBadRequest() throws Exception {
+
         String json = """
                 {
                     "title": "Valid task",
@@ -253,6 +347,7 @@ class TaskControllerTest {
 
     @Test
     void createTaskWithInvalidPriorityReturnsBadRequest() throws Exception {
+
         String json = """
                 {
                     "title": "Valid task",
@@ -270,6 +365,7 @@ class TaskControllerTest {
 
     @Test
     void unauthenticatedRequestIsRejected() throws Exception {
+
         mockMvc.perform(get("/api/projects/10/tasks/101"))
                 .andExpect(status().isForbidden());
     }

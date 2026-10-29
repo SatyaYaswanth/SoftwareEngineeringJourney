@@ -12,6 +12,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.codepilot.springbootbasics.dto.PageResponse;
+import com.codepilot.springbootbasics.entity.TaskPriority;
+import com.codepilot.springbootbasics.entity.TaskStatus;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/api/projects/{projectId}/tasks")
@@ -40,9 +44,16 @@ public class TaskController {
         );
     }
 
+
     @GetMapping
-    public List<TaskResponse> getProjectTasks(
+    public PageResponse<TaskResponse> getProjectTasks(
             @PathVariable Long projectId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction,
+            @RequestParam(required = false) TaskStatus status,
+            @RequestParam(required = false) TaskPriority priority,
             Authentication authentication) {
 
         CodePilotUser user =
@@ -50,9 +61,16 @@ public class TaskController {
 
         return taskService.getProjectTasks(
                 projectId,
-                user.getEmail()
+                user.getEmail(),
+                page,
+                size,
+                sortBy,
+                direction,
+                status,
+                priority
         );
     }
+
 
     @GetMapping("/{taskId}")
     public TaskResponse getTask(

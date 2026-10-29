@@ -17,6 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import com.codepilot.springbootbasics.exception.ResourceNotFoundException;
+import com.codepilot.springbootbasics.dto.PageResponse;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @Service
 public class TaskService {
@@ -83,20 +87,53 @@ public class TaskService {
         return TaskResponse.from(savedTask);
     }
 
+
     @Transactional(readOnly = true)
-    public List<TaskResponse> getProjectTasks(
+    public PageResponse<TaskResponse> getProjectTasks(
             Long projectId,
-            String authenticatedEmail) {
+            String authenticatedEmail,
+            int page,
+            int size,
+            String sortBy,
+            String direction,
+            TaskStatus status,
+            TaskPriority priority) {
 
         Project project = getAuthorizedProject(
                 projectId, authenticatedEmail);
 
-        return taskRepository
-                .findAllByProject_Id(project.getId())
-                .stream()
-                .map(TaskResponse::from)
-                .toList();
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException(
+                    "Page must be non-negative and size must be between 1 and 100");
+        }
+
+        if (!List.of(
+                "id", "title", "description", "status", "priority"
+        ).contains(sortBy)) {
+            throw new IllegalArgumentException("Invalid task sort field");
+        }
+
+        Sort.Direction sortDirection;
+        try {
+            sortDirection = Sort.Direction.fromString(direction);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException(
+                    "Direction must be 'asc' or 'desc'");
+        }
+
+        Pageable pageable = PageRequest.of(
+                page, size, Sort.by(sortDirection, sortBy));
+
+        return PageResponse.from(
+                taskRepository.findByProjectWithFilters(
+                                project.getId(),
+                                status,
+                                priority,
+                                pageable)
+                        .map(TaskResponse::from)
+        );
     }
+
 
     @Transactional(readOnly = true)
     public TaskResponse getTask(

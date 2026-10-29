@@ -1,21 +1,26 @@
 
 package com.codepilot.springbootbasics.service;
 
+import com.codepilot.springbootbasics.dto.PageResponse;
 import com.codepilot.springbootbasics.dto.ProjectCreateRequest;
 import com.codepilot.springbootbasics.dto.ProjectResponse;
 import com.codepilot.springbootbasics.entity.CodePilotUser;
 import com.codepilot.springbootbasics.entity.Project;
 import com.codepilot.springbootbasics.entity.Workspace;
+import com.codepilot.springbootbasics.exception.ResourceNotFoundException;
 import com.codepilot.springbootbasics.exception.UserNotFoundException;
 import com.codepilot.springbootbasics.repository.CodePilotUserRepository;
 import com.codepilot.springbootbasics.repository.ProjectRepository;
 import com.codepilot.springbootbasics.repository.WorkspaceRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -23,8 +28,9 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import com.codepilot.springbootbasics.exception.ResourceNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 class ProjectServiceTest {
@@ -46,6 +52,7 @@ class ProjectServiceTest {
 
     @BeforeEach
     void setUp() throws Exception {
+
         user = new CodePilotUser(
                 "Test User",
                 "test@example.com",
@@ -59,10 +66,9 @@ class ProjectServiceTest {
         setGeneratedId(workspace, 10L);
     }
 
-    // Assign generated IDs to test fixtures without adding
-    // setters to production entities.
     private void setGeneratedId(Object entity, Long id)
             throws Exception {
+
         Field idField = entity.getClass().getDeclaredField("id");
         idField.setAccessible(true);
         idField.set(entity, id);
@@ -70,14 +76,14 @@ class ProjectServiceTest {
 
     @Test
     void createProject_shouldCreateProject_whenWorkspaceBelongsToUser() {
+
         String email = "test@example.com";
         Long workspaceId = 10L;
 
-        ProjectCreateRequest request =
-                new ProjectCreateRequest(
-                        "CodePilot API",
-                        "Backend development"
-                );
+        ProjectCreateRequest request = new ProjectCreateRequest(
+                "CodePilot API",
+                "Backend development"
+        );
 
         when(codePilotUserRepository.findByEmail(email))
                 .thenReturn(Optional.of(user));
@@ -94,37 +100,38 @@ class ProjectServiceTest {
         when(projectRepository.save(any(Project.class)))
                 .thenReturn(savedProject);
 
-        ProjectResponse response =
-                projectService.createProject(
-                        workspaceId, request, email
-                );
+        ProjectResponse response = projectService.createProject(
+                workspaceId,
+                request,
+                email
+        );
 
         assertNotNull(response);
         assertEquals("CodePilot API", response.name());
+        assertEquals("Backend development", response.description());
 
         verify(workspaceRepository)
                 .findByIdAndUserId(workspaceId, 1L);
+
         verify(projectRepository).save(any(Project.class));
     }
 
     @Test
     void createProject_shouldThrowException_whenUserDoesNotExist() {
+
         String email = "missing@example.com";
 
-        ProjectCreateRequest request =
-                new ProjectCreateRequest(
-                        "CodePilot API",
-                        "Backend development"
-                );
+        ProjectCreateRequest request = new ProjectCreateRequest(
+                "CodePilot API",
+                "Backend development"
+        );
 
         when(codePilotUserRepository.findByEmail(email))
                 .thenReturn(Optional.empty());
 
         assertThrows(
                 UserNotFoundException.class,
-                () -> projectService.createProject(
-                        10L, request, email
-                )
+                () -> projectService.createProject(10L, request, email)
         );
 
         verify(workspaceRepository, never())
@@ -135,14 +142,14 @@ class ProjectServiceTest {
 
     @Test
     void createProject_shouldThrowException_whenWorkspaceIsNotOwnedByUser() {
+
         String email = "test@example.com";
         Long workspaceId = 99L;
 
-        ProjectCreateRequest request =
-                new ProjectCreateRequest(
-                        "CodePilot API",
-                        "Backend development"
-                );
+        ProjectCreateRequest request = new ProjectCreateRequest(
+                "CodePilot API",
+                "Backend development"
+        );
 
         when(codePilotUserRepository.findByEmail(email))
                 .thenReturn(Optional.of(user));
@@ -162,6 +169,7 @@ class ProjectServiceTest {
 
     @Test
     void getWorkspaceProjects_shouldReturnProjects_whenWorkspaceBelongsToUser() {
+
         String email = "test@example.com";
 
         Project first = new Project(
@@ -182,21 +190,39 @@ class ProjectServiceTest {
         when(workspaceRepository.findByIdAndUserId(10L, 1L))
                 .thenReturn(Optional.of(workspace));
 
-        when(projectRepository.findByWorkspaceId(10L))
-                .thenReturn(List.of(first, second));
+        when(projectRepository.findByWorkspaceId(
+                eq(10L),
+                any(Pageable.class)
+        )).thenReturn(new PageImpl<>(List.of(first, second)));
 
-        List<ProjectResponse> responses =
-                projectService.getWorkspaceProjects(10L, email);
+        PageResponse<ProjectResponse> response =
+                projectService.getWorkspaceProjects(
+                        10L,
+                        email,
+                        0,
+                        10,
+                        "id",
+                        "asc"
+                );
 
-        assertEquals(2, responses.size());
-        assertEquals("Frontend", responses.get(0).name());
-        assertEquals("Backend", responses.get(1).name());
+        assertNotNull(response);
+        assertEquals(2, response.getContent().size());
+        assertEquals("Frontend", response.getContent().get(0).name());
+        assertEquals("Backend", response.getContent().get(1).name());
+        assertEquals(2, response.getTotalElements());
+        assertEquals(1, response.getTotalPages());
+        assertTrue(response.isFirst());
+        assertTrue(response.isLast());
 
-        verify(projectRepository).findByWorkspaceId(10L);
+        verify(projectRepository).findByWorkspaceId(
+                eq(10L),
+                any(Pageable.class)
+        );
     }
 
     @Test
     void getWorkspaceProjects_shouldThrowException_whenWorkspaceNotOwned() {
+
         String email = "test@example.com";
 
         when(codePilotUserRepository.findByEmail(email))
@@ -207,14 +233,25 @@ class ProjectServiceTest {
 
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> projectService.getWorkspaceProjects(99L, email)
+                () -> projectService.getWorkspaceProjects(
+                        99L,
+                        email,
+                        0,
+                        10,
+                        "id",
+                        "asc"
+                )
         );
 
-        verify(projectRepository, never()).findByWorkspaceId(anyLong());
+        verify(projectRepository, never()).findByWorkspaceId(
+                anyLong(),
+                any(Pageable.class)
+        );
     }
 
     @Test
     void getProject_shouldReturnProject_whenOwnedByUser() {
+
         String email = "test@example.com";
         Long projectId = 20L;
 
@@ -242,6 +279,7 @@ class ProjectServiceTest {
 
     @Test
     void getProject_shouldThrowException_whenProjectNotFoundOrNotOwned() {
+
         String email = "test@example.com";
         Long projectId = 99L;
 
@@ -259,6 +297,7 @@ class ProjectServiceTest {
 
     @Test
     void getProject_shouldThrowException_whenUserDoesNotExist() {
+
         String email = "missing@example.com";
 
         when(codePilotUserRepository.findByEmail(email))
